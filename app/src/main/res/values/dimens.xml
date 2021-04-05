@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="dialog_padding_size">12dp</dimen>
+    <dimen name="btn_close_margin_size">6dp</dimen>
+    <dimen name="common_bottom_margin">20dp</dimen>
+
+    <dimen name="tower_primary_text_dimen">5sp</dimen>
+    <dimen name="setting_content_text_dimen">12sp</dimen>
+</resources>

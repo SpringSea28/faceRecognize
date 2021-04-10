@@ -13,7 +13,8 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".activity.FaceAttrPreviewActivity"
             android:launchMode="singleTop" />
@@ -59,6 +60,10 @@
         <activity
             android:name=".activity.RecognizeActivity"
             android:launchMode="singleTop" />
+        <activity android:name=".activity.MainActivity"
+            android:launchMode="singleTop"
+            android:exported="true">
+        </activity>
 
 
         <provider
@@ -69,6 +74,16 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
+        </provider>
+
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="com.arcsoft.arcfacedemo.ztrs.UploadFileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"/>
         </provider>
 
     </application>

@@ -11,6 +11,7 @@ import android.view.View;
 import com.arcsoft.arcfacedemo.R;
 import com.arcsoft.arcfacedemo.common.Constants;
 import com.arcsoft.arcfacedemo.fragment.ChooseDetectDegreeDialog;
+import com.arcsoft.arcfacedemo.widget.SettingSecretDialog;
 import com.arcsoft.face.ActiveFileInfo;
 import com.arcsoft.face.ErrorInfo;
 import com.arcsoft.face.FaceEngine;
@@ -63,6 +64,8 @@ public class ChooseFunctionActivity extends BaseActivity {
             int code = FaceEngine.getVersion(versionInfo);
             Log.i(TAG, "onCreate: getVersion, code is: " + code + ", versionInfo is: " + versionInfo);
         }
+        SettingSecretDialog settingSecretDialog = new SettingSecretDialog(this);
+        settingSecretDialog.show();
     }
 
     /**

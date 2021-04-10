@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.arcsoft.arcfacedemo",
+  "variantName": "release",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "properties": [],
+      "versionCode": 1,
+      "versionName": "3.0.1",
+      "enabled": true,
+      "outputFile": "face_v3.0.1_20210405-133549.apk"
+    }
+  ]
+}

@@ -1,9 +1,14 @@
 package com.arcsoft.arcfacedemo.activity;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
 import android.graphics.Point;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,6 +35,7 @@ import com.arcsoft.arcfacedemo.faceserver.CompareResult;
 import com.arcsoft.arcfacedemo.faceserver.FaceServer;
 import com.arcsoft.arcfacedemo.model.DrawInfo;
 import com.arcsoft.arcfacedemo.model.FacePreviewInfo;
+import com.arcsoft.arcfacedemo.model.FaceRegisterInfo;
 import com.arcsoft.arcfacedemo.util.ConfigUtil;
 import com.arcsoft.arcfacedemo.util.DrawHelper;
 import com.arcsoft.arcfacedemo.util.camera.CameraHelper;
@@ -46,10 +52,15 @@ import com.arcsoft.face.AgeInfo;
 import com.arcsoft.face.ErrorInfo;
 import com.arcsoft.face.FaceEngine;
 import com.arcsoft.face.FaceFeature;
+import com.arcsoft.face.FaceInfo;
 import com.arcsoft.face.GenderInfo;
 import com.arcsoft.face.LivenessInfo;
 import com.arcsoft.face.enums.DetectFaceOrientPriority;
 import com.arcsoft.face.enums.DetectMode;
+import com.arcsoft.imageutil.ArcSoftImageFormat;
+import com.arcsoft.imageutil.ArcSoftImageUtil;
+import com.arcsoft.imageutil.ArcSoftImageUtilError;
+import com.arcsoft.imageutil.ArcSoftRotateDegree;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,6 +69,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +83,7 @@ import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 
 public class RecognizeActivity extends BaseActivity implements ViewTreeObserver.OnGlobalLayoutListener {
@@ -327,6 +340,8 @@ public class RecognizeActivity extends BaseActivity implements ViewTreeObserver.
         super.onDestroy();
     }
 
+    private byte[] cameraData;
+
     private void initCamera() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -473,6 +488,7 @@ public class RecognizeActivity extends BaseActivity implements ViewTreeObserver.
 
             @Override
             public void onPreview(final byte[] nv21, Camera camera) {
+                cameraData = nv21;
                 if (faceRectView != null) {
                     faceRectView.clearFaceInfo();
                 }
@@ -900,6 +916,7 @@ public class RecognizeActivity extends BaseActivity implements ViewTreeObserver.
         String name = null;
         String idCard = null;
         String fileName = saveFile(userName);
+//        String fileName = saveNv21(cameraData);
         Log.e("wch","desFile:"+fileName);
         if(s!= null && s.length>=2){
             name = s[0];
@@ -910,7 +927,13 @@ public class RecognizeActivity extends BaseActivity implements ViewTreeObserver.
             intent.putExtra("idCard",idCard);
             intent.putExtra("fileName",fileName);
             setResult(RESULT_OK,intent);
-            finish();
+            Observable.timer(3000,TimeUnit.MILLISECONDS)
+                    .subscribe(new Consumer<Long>() {
+                        @Override
+                        public void accept(Long aLong) throws Exception {
+                            finish();
+                        }
+                    });
         }
     }
     private String saveFile(String srcFileName){
@@ -968,5 +991,168 @@ public class RecognizeActivity extends BaseActivity implements ViewTreeObserver.
             }
         }
         return desFile.getAbsolutePath();
+    }
+
+    private String saveNv21(byte[] nv21){
+        String ROOT_PATH = getFilesDir().getAbsolutePath();
+        String SAVE_IMG_DIR = "register" + File.separator + "imgs";
+        String IMG_SUFFIX = ".jpg";
+
+        ROOT_PATH = getExternalFilesDir(null).getAbsolutePath();
+        //图片存储的文件夹
+        File imgDir = new File(ROOT_PATH + File.separator + SAVE_IMG_DIR);
+        if (!imgDir.exists() && !imgDir.mkdirs()) {
+            Log.e(TAG, "recognize: can not create image directory");
+            return null;
+        }
+        long timeInMillis = Calendar.getInstance().getTimeInMillis();
+        File desFile = new File(ROOT_PATH + File.separator
+                + SAVE_IMG_DIR + File.separator
+                + timeInMillis + IMG_SUFFIX);
+        try {
+
+            FileOutputStream filecon = new FileOutputStream(desFile);
+
+            YuvImage image = new YuvImage(nv21, ImageFormat.NV21, previewSize.width, previewSize.height, null);   //将NV21 data保存成YuvImage
+            //图像压缩
+            image.compressToJpeg(
+                    new Rect(0, 0, image.getWidth(), image.getHeight()),
+                    70, filecon);   // 将NV21格式图片，以质量70压缩成Jpeg，并得到JPEG数据流
+
+        }catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        return desFile.getAbsolutePath();
+    }
+
+    private boolean saveNv21(Context context, byte[] nv21, int width, int height, FaceInfo faceInfo, String name) {
+        synchronized (this) {
+            String ROOT_PATH = getFilesDir().getAbsolutePath();
+            String SAVE_IMG_DIR = "register" + File.separator + "imgs";
+            String IMG_SUFFIX = ".jpg";
+            if (context == null || nv21 == null || width % 4 != 0 || nv21.length != width * height * 3 / 2) {
+                Log.e(TAG, "registerNv21: invalid params");
+                return false;
+            }
+
+            if (ROOT_PATH == null) {
+                ROOT_PATH = context.getFilesDir().getAbsolutePath();
+            }
+            //图片存储的文件夹
+            File imgDir = new File(ROOT_PATH + File.separator + SAVE_IMG_DIR);
+            if (!imgDir.exists() && !imgDir.mkdirs()) {
+                Log.e(TAG, "registerNv21: can not create image directory");
+                return false;
+            }
+
+
+                String userName = name == null ? String.valueOf(System.currentTimeMillis()) : name;
+                try {
+                    // 保存注册结果（注册图、特征数据）
+                    // 为了美观，扩大rect截取注册图
+                    Rect cropRect = getBestRect(width, height, faceInfo.getRect());
+                    if (cropRect == null) {
+                        Log.e(TAG, "registerNv21: cropRect is null!");
+                        return false;
+                    }
+
+                    cropRect.left &= ~3;
+                    cropRect.top &= ~3;
+                    cropRect.right &= ~3;
+                    cropRect.bottom &= ~3;
+
+                    File file = new File(imgDir + File.separator + userName + IMG_SUFFIX);
+
+
+                    // 创建一个头像的Bitmap，存放旋转结果图
+                    Bitmap headBmp = getHeadImage(nv21, width, height, faceInfo.getOrient(), cropRect, ArcSoftImageFormat.NV21);
+
+                    FileOutputStream fosImage = new FileOutputStream(file);
+                    headBmp.compress(Bitmap.CompressFormat.JPEG, 100, fosImage);
+                    fosImage.close();
+                    return true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+        }
+
+    }
+
+    private Bitmap getHeadImage(byte[] originImageData, int width, int height, int orient, Rect cropRect, ArcSoftImageFormat imageFormat) {
+        byte[] headImageData = ArcSoftImageUtil.createImageData(cropRect.width(), cropRect.height(), imageFormat);
+        int cropCode = ArcSoftImageUtil.cropImage(originImageData, headImageData, width, height, cropRect, imageFormat);
+        if (cropCode != ArcSoftImageUtilError.CODE_SUCCESS) {
+            throw new RuntimeException("crop image failed, code is " + cropCode);
+        }
+
+        //判断人脸旋转角度，若不为0度则旋转注册图
+        byte[] rotateHeadImageData = null;
+        int rotateCode;
+        int cropImageWidth;
+        int cropImageHeight;
+        // 90度或270度的情况，需要宽高互换
+        if (orient == FaceEngine.ASF_OC_90 || orient == FaceEngine.ASF_OC_270) {
+            cropImageWidth = cropRect.height();
+            cropImageHeight = cropRect.width();
+        } else {
+            cropImageWidth = cropRect.width();
+            cropImageHeight = cropRect.height();
+        }
+        ArcSoftRotateDegree rotateDegree = null;
+        switch (orient) {
+            case FaceEngine.ASF_OC_90:
+                rotateDegree = ArcSoftRotateDegree.DEGREE_270;
+                break;
+            case FaceEngine.ASF_OC_180:
+                rotateDegree = ArcSoftRotateDegree.DEGREE_180;
+                break;
+            case FaceEngine.ASF_OC_270:
+                rotateDegree = ArcSoftRotateDegree.DEGREE_90;
+                break;
+            case FaceEngine.ASF_OC_0:
+            default:
+                rotateHeadImageData = headImageData;
+                break;
+        }
+        // 非0度的情况，旋转图像
+        if (rotateDegree != null){
+            rotateHeadImageData = new byte[headImageData.length];
+            rotateCode = ArcSoftImageUtil.rotateImage(headImageData, rotateHeadImageData, cropRect.width(), cropRect.height(), rotateDegree, imageFormat);
+            if (rotateCode != ArcSoftImageUtilError.CODE_SUCCESS) {
+                throw new RuntimeException("rotate image failed, code is " + rotateCode);
+            }
+        }
+        // 将创建一个Bitmap，并将图像数据存放到Bitmap中
+        Bitmap headBmp = Bitmap.createBitmap(cropImageWidth, cropImageHeight, Bitmap.Config.RGB_565);
+        if (ArcSoftImageUtil.imageDataToBitmap(rotateHeadImageData, headBmp, imageFormat) != ArcSoftImageUtilError.CODE_SUCCESS) {
+            throw new RuntimeException("failed to transform image data to bitmap");
+        }
+        return headBmp;
+    }
+
+    private static Rect getBestRect(int width, int height, Rect srcRect) {
+        if (srcRect == null) {
+            return null;
+        }
+        Rect rect = new Rect(srcRect);
+
+        // 原rect边界已溢出宽高的情况
+        int maxOverFlow = Math.max(-rect.left, Math.max(-rect.top, Math.max(rect.right - width, rect.bottom - height)));
+        if (maxOverFlow >= 0) {
+            rect.inset(maxOverFlow, maxOverFlow);
+            return rect;
+        }
+
+        // 原rect边界未溢出宽高的情况
+        int padding = rect.height() / 2;
+
+        // 若以此padding扩张rect会溢出，取最大padding为四个边距的最小值
+        if (!(rect.left - padding > 0 && rect.right + padding < width && rect.top - padding > 0 && rect.bottom + padding < height)) {
+            padding = Math.min(Math.min(Math.min(rect.left, width - rect.right), height - rect.bottom), rect.top);
+        }
+        rect.inset(-padding, -padding);
+        return rect;
     }
 }

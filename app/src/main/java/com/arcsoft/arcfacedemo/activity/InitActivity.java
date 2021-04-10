@@ -68,6 +68,10 @@ public class InitActivity extends BaseActivity {
         }
         requestCode = getIntent().getIntExtra("requestCode", -1);
         ActiveFileInfo activeFileInfo = new ActiveFileInfo();
+        if (!checkPermissions(NEEDED_PERMISSIONS)) {
+            activeEngine(null);
+            return;
+        }
         int res = FaceEngine.getActiveFileInfo(InitActivity.this, activeFileInfo);
         if (res == ErrorInfo.MOK) {
             Log.i(TAG, activeFileInfo.toString());

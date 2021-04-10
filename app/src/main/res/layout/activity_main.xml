@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include layout="@layout/title_bar_item"
+        android:id="@+id/title_bar"/>
+
+    <com.arcsoft.arcfacedemo.ztrs.ZpWebView
+        android:id="@+id/webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/title_bar"/>
+
+    <FrameLayout
+            android:id="@+id/container_for_fragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+        android:layout_below="@id/title_bar"/>
+</RelativeLayout>

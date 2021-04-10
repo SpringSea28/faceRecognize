@@ -1,6 +1,6 @@
 <resources>
     <!--app name-->
-    <string name="app_name">ArcFaceDemo</string>
+    <string name="app_name">ztrsface</string>
 
     <!--settings、choose function page-->
     <string name="page_preview">face attributes detect(video)</string>
